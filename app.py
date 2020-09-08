@@ -1,26 +1,25 @@
-import adafruit_dht
-import time
-import board
+import os
+import logging
+# import indoor_temp
 
-# --------- User Settings ---------
-SENSOR_LOCATION_NAME = "Office"
-METRIC_UNITS = False
-# ---------------------------------
+from weather_api import weather
 
-dhtSensor = adafruit_dht.DHT22(board.D4)
+CRED_DIR = os.path.expanduser("~")
+api_key_file = "{0}/.openweatherapi.txt".format(CRED_DIR)
+SCRIPT_EXC_DIR = os.path.dirname(os.path.realpath(__file__))
+lock_file = "{0}/push.lock".format(SCRIPT_EXC_DIR)
+log_dir = f'{SCRIPT_EXC_DIR}/app.log'
+local_zipcode = "97477"
 
-def get_indoor_temperature():
-    humidity = dhtSensor.humidity
-    temp_c = dhtSensor.temperature
-    if METRIC_UNITS:
-            print(f"{SENSOR_LOCATION_NAME} Temperature(C), {temp_c}")
-            tempurature = temp_c
-    else:
-            temp_f = format(temp_c * 9.0 / 5.0 + 32.0, ".2f")
-            print(f"{SENSOR_LOCATION_NAME} Temperature(F), {temp_f}")
-            tempurature = temp_f
-    humidity = format(humidity,".2f")
-    print(f"{SENSOR_LOCATION_NAME} Humidity(%), {humidity}")
-    return {"tempurature": tempurature, "humidity": humidity}
+# Setup logging
+logging.basicConfig(filename=log_dir, format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s', level=logging.INFO)
 
-get_indoor_temperature()
+# Get weather API credentials from disk
+if os.path.isfile(api_key_file):
+    with open(api_key_file, 'r') as f:
+        WEATHER_API_KEY = f.readline()
+else:
+    print(f"No API Credentials found in: {api_key_file} - Check README file for setup instuctions")
+    logging.info(f"No API Credentials found in: {api_key_file} - Check README file for setup instuctions")
+
+weather.WeatherMan(WEATHER_API_KEY, local_zipcode)
