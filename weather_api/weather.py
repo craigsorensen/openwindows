@@ -20,10 +20,6 @@ class WeatherMan:
         # base_url variable to store url 
         BASE_URL = "http://api.openweathermap.org/data/2.5/weather?"
 
-        # Give city name 
-        
-        # city_name = input("Enter city name : ") 
-
         # complete_url variable to store 
 
         complete_url = BASE_URL + "appid=" + self.key + "&q=" + self.zipcode + "&units=imperial"
