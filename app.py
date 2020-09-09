@@ -1,9 +1,10 @@
 import os
 import logging
-import indoor_temp.indoor_temp
 
 from datetime import datetime
+
 from weather_api import weather
+from indoor_temp import get_indoor_temperature
 
 CRED_DIR = os.path.expanduser("~")
 api_key_file = "{0}/.openweatherapi.txt".format(CRED_DIR)
