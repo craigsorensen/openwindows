@@ -3,6 +3,7 @@
 # import required modules 
 import requests
 import json 
+import logging
 
 class WeatherMan:
     '''
@@ -23,11 +24,12 @@ class WeatherMan:
         # complete_url variable to store 
 
         complete_url = BASE_URL + "appid=" + self.key + "&q=" + self.zipcode + "&units=imperial"
-
+        logging.debug(f"Weather URL: {complete_url}")
         response = requests.get(complete_url) 
         r = response.json() 
+        logging.debug(f"Weather API response: {r}")
 
-        if r["cod"] != "404": 
+        if r["cod"] == 200: 
             
             m = r["main"] 
             current_temperature = m["temp"] 
@@ -36,8 +38,13 @@ class WeatherMan:
 
             # print(f"Temperature: {str(current_temperature)}F") 
             # print(f"Humidity: {str(current_humidiy)}%") 
-        else: 
-            print(" City Not Found ") 
+        elif r["cod"] == 404:
+            print(f"City Not Found for: {zipcode}")
+            logging.info(f"City Not Found for: {zipcode}")
+        else:
+            print(f"Error {r['cod']} - {r['message']}")
+            logging.info(f"Error {r['cod']} - {r['message']}")
+            exit()
         
         return { "tempurature": current_temperature, "humidity": current_humidiy }
 
