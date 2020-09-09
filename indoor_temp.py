@@ -14,13 +14,11 @@ def get_indoor_temperature():
     temp_c = dhtSensor.temperature
     if METRIC_UNITS:
             print(f"{SENSOR_LOCATION_NAME} Temperature(C), {temp_c}")
-            tempurature = temp_c
+            temperature = temp_c
     else:
             temp_f = format(temp_c * 9.0 / 5.0 + 32.0, ".2f")
             print(f"{SENSOR_LOCATION_NAME} Temperature(F), {temp_f}")
-            tempurature = temp_f
+            temperature = temp_f
     humidity = format(humidity,".2f")
     print(f"{SENSOR_LOCATION_NAME} Humidity(%), {humidity}")
-    return {"tempurature": tempurature, "humidity": humidity}
-
-get_indoor_temperature()
+    return {"temperature": temperature, "humidity": humidity}

@@ -33,8 +33,8 @@ if not WEATHER_API_KEY:
 # print(WEATHER_API_KEY)
 # print(LOCAL_ZIPCODE)
 
-indoor = int(indoor_temp()['tempurature'])
-outdoor = int((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature)
+indoor = round(float(get_indoor_temperature()['temperature']))
+outdoor = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature))
 hour = int(date.strftime("%H"))
 morning = False
 DEGREE_BUFFER = 2
