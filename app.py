@@ -57,10 +57,9 @@ if hour <= 11:
 
 #outside = weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)
 #indoor =  indoor_temp()
+message = f"Inside: {indoor} || Outside: {outdoor} || Outside Adjusted: {outdoor - DEGREE_BUFFER}"
 
 if morning:
-    message = f"Inside: {indoor} || Outside: {outdoor} || Outside Adjusted: {outdoor - DEGREE_BUFFER}"
-
     if os.path.isfile(lock_file_location):
         with open(lock_file_location, 'r') as f:
             lock_file_contents = f.readlines()
