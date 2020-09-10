@@ -5,9 +5,11 @@ from datetime import datetime
 
 from weather_api import weather
 from indoor_temp import get_indoor_temperature
+from send_push import push
 
 CRED_DIR = os.path.expanduser("~")
 api_key_file = "{0}/.openweatherapi.txt".format(CRED_DIR)
+push_api_cred_file = "{0}/.pushover.txt".format(CRED_DIR)
 SCRIPT_EXC_DIR = os.path.dirname(os.path.realpath(__file__))
 lock_file_location = "{0}/push.lock".format(SCRIPT_EXC_DIR)
 log_dir = f'{SCRIPT_EXC_DIR}/app.log'
@@ -28,6 +30,16 @@ if not WEATHER_API_KEY:
     print(f"No API Credentials found in: {api_key_file} - Check README file for setup instuctions")
     logging.info(f"No API Credentials found in: {api_key_file} - Check README file for setup instuctions")
 
+# Get push API credentials from disk
+if os.path.isfile(push_api_cred_file):
+    with open(api_cred_file, 'r') as f:
+        creds = f.readlines()
+    TOKEN = creds[0].strip().split(':')[1]
+    USER = creds[1].strip().split(':')[1]
+else:
+    print(f"No API Credentials found in: {push_api_cred_file} - Check README file for setup instuctions")
+    logging.info(f"No API Credentials found in: {push_api_cred_file} - Check README file for setup instuctions")
+
 # print(CRED_DIR)
 # print(api_key_file)
 # print(WEATHER_API_KEY)
@@ -47,6 +59,8 @@ if hour <= 11:
 #indoor =  indoor_temp()
 
 if morning:
+    message = f"Inside: {indoor} || Outside: {outdoor} || Outside Adjusted: {outdoor - DEGREE_BUFFER}"
+
     if os.path.isfile(lock_file_location):
         with open(lock_file_location, 'r') as f:
             lock_file_contents = f.readlines()
@@ -63,8 +77,10 @@ if morning:
             os.remove(lock_file_location)
     if (outdoor - DEGREE_BUFFER) >= indoor:
         # close windows
-        print(f"Inside: {indoor} - Outside: {outdoor - DEGREE_BUFFER}")
+        print(f"CLOSE WINDOWS! {message}")
+        push.send(TOKEN, USER, f"CLOSE WINDOWS! {message}")
         print("Sent Close windows notification")
+
         logging.debug(f"Writing lock file - date: {date.strftime('%b %d, %Y')} morning: {morning}")
     
         with open(lock_file_location, 'w') as f:
@@ -72,8 +88,11 @@ if morning:
             f.write(f"{morning}\n")
     else:
         #log temp and do nothing
-        print(f"Inside: {indoor} || Outside: {outdoor} || Outside Adjusted: {outdoor - DEGREE_BUFFER}")
+        print(message)
         print("It's colder outside, recommend doing nothing!")
+        logging.info(message)
+        logging.info("It's colder outside, recommend doing nothing!")
+        
 
 if not morning:
     if os.path.isfile(lock_file_location):
@@ -91,7 +110,8 @@ if not morning:
             logging.info("Old lockfile found, removing!")
             os.remove(lock_file_location)
     if (outdoor - DEGREE_BUFFER) <= indoor:
-        print(f"Inside: {indoor} - Outside: {outdoor - DEGREE_BUFFER}")
+        print(message)
+        push.send(TOKEN, USER, f"OPEN WINDOWS {message}")
         print("Sent OPEN windows notification")
         logging.debug(f"Writing lock file - date: {date.strftime('%b %d, %Y')} morning: {morning}")
     
@@ -101,5 +121,7 @@ if not morning:
 
     else:
         #log temp and do nothing
-        print(f"Inside: {indoor} || Outside: {outdoor} || Outside Adjusted: {outdoor - DEGREE_BUFFER}")
+        print(message)
         print("It's WARMER outside, recommend doing nothing!")
+        logging.info(message)
+        logging.info("It's WARMER outside, recommend doing nothing!")
