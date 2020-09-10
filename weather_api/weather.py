@@ -27,6 +27,7 @@ class WeatherMan:
         logging.debug(f"Weather URL: {complete_url}")
         response = requests.get(complete_url) 
         r = response.json() 
+        print(r)
         logging.debug(f"Weather API response: {r}")
 
         if r["cod"] == 200: 
