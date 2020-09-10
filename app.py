@@ -32,7 +32,7 @@ if not WEATHER_API_KEY:
 
 # Get push API credentials from disk
 if os.path.isfile(push_api_cred_file):
-    with open(api_cred_file, 'r') as f:
+    with open(push_api_cred_file, 'r') as f:
         creds = f.readlines()
     TOKEN = creds[0].strip().split(':')[1]
     USER = creds[1].strip().split(':')[1]
