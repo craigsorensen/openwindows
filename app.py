@@ -17,7 +17,7 @@ LOCAL_ZIPCODE = "97477,us"
 date = datetime.now()
 
 # Setup logging
-logging.basicConfig(filename=log_dir, format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s', level=logging.INFO)
+logging.basicConfig(filename=log_dir, format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s', level=logging.DEBUG)
 
 # Get weather API credentials from disk
 if os.path.isfile(api_key_file):
