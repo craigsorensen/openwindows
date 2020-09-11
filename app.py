@@ -9,7 +9,7 @@ from send_push import push
 
 CRED_DIR = os.path.expanduser("~")
 api_key_file = "{0}/.openweatherapi.txt".format(CRED_DIR)
-push_api_cred_file = "{0}/.pushover.txt".format(CRED_DIR)
+push_api_cred_file = "{0}/.openwindows_push_api.txt".format(CRED_DIR)
 SCRIPT_EXC_DIR = os.path.dirname(os.path.realpath(__file__))
 lock_file_location = "{0}/push.lock".format(SCRIPT_EXC_DIR)
 log_dir = f'{SCRIPT_EXC_DIR}/app.log'
