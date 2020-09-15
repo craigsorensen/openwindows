@@ -40,26 +40,30 @@ else:
     print(f"No API Credentials found in: {push_api_cred_file} - Check README file for setup instuctions")
     logging.info(f"No API Credentials found in: {push_api_cred_file} - Check README file for setup instuctions")
 
-# print(CRED_DIR)
-# print(api_key_file)
-# print(WEATHER_API_KEY)
-# print(LOCAL_ZIPCODE)
+
 
 indoor = round(float(get_indoor_temperature()['temperature']))
 outdoor = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature))
+
 hour = int(date.strftime("%H"))
-morning = False
 DEGREE_BUFFER = 2
 
-if hour <= 11:
-    morning = True
+
+def get_time_boundary(h):
+    '''
+    Calculates if operation is happening in the in the morning or evening and returns if the windows should be open or closed.
+    '''
+    if h >= 8 and h <= 4:
+        return "close"
+    if h >= 17 and h <= 23:
+        return "open"
+    return "OOB"
 
 
-#outside = weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)
-#indoor =  indoor_temp()
 message = f"Inside: {indoor} || Outside: {outdoor} || Outside Adjusted: {outdoor - DEGREE_BUFFER}"
-
-if morning:
+boundary = get_time_boundary(hour)
+print(boundary)
+if  boundary == "close":
     if os.path.isfile(lock_file_location):
         with open(lock_file_location, 'r') as f:
             lock_file_contents = f.readlines()
@@ -80,11 +84,11 @@ if morning:
         push.send(TOKEN, USER, f"CLOSE WINDOWS! {message}")
         print("Sent Close windows notification")
 
-        logging.debug(f"Writing lock file - date: {date.strftime('%b %d, %Y')} morning: {morning}")
+        logging.debug(f"Writing lock file - date: {date.strftime('%b %d, %Y')} status: {boundary}")
     
         with open(lock_file_location, 'w') as f:
             f.write(date.strftime("%b %d, %Y")+"\n")
-            f.write(f"{morning}\n")
+            f.write(f"{boundary}\n")
     else:
         #log temp and do nothing
         print(message)
@@ -93,12 +97,12 @@ if morning:
         logging.info("It's colder outside, recommend doing nothing!")
         
 
-if not morning:
+if boundary == "open":
     if os.path.isfile(lock_file_location):
         with open(lock_file_location, 'r') as f:
             lock_file_contents = f.readlines()
             lock_file_contents = [e.strip() for e in lock_file_contents]
-        if lock_file_contents[0] == date.strftime("%b %d, %Y") and bool(lock_file_contents[1]):
+        if lock_file_contents[0] == date.strftime("%b %d, %Y") and lock_file_contents[1] == "open":
             print("Found lockfile. Has notification already been sent?")
             logging.info("Found lockfile. Has notification already been sent today?")
             logging.info(f"Lockfile Location: {lock_file_location}")
@@ -112,11 +116,11 @@ if not morning:
         print(message)
         push.send(TOKEN, USER, f"OPEN WINDOWS {message}")
         print("Sent OPEN windows notification")
-        logging.debug(f"Writing lock file - date: {date.strftime('%b %d, %Y')} morning: {morning}")
+        logging.debug(f"Writing lock file - date: {date.strftime('%b %d, %Y')} status: {boundary}")
     
         with open(lock_file_location, 'w') as f:
             f.write(date.strftime("%b %d, %Y")+"\n")
-            f.write(f"{morning}\n")
+            f.write(f"{boundary}\n")
 
     else:
         #log temp and do nothing
