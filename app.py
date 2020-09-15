@@ -131,4 +131,4 @@ if boundary == "open":
 
 if boundary == "OOB":
         print("Not in operational boundary.")
-        logging.info(f"OOB: {message})
+        logging.info(f"OOB: {message}")
