@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 
 from weather_api import weather
-from indoor_temp import get_indoor_temperature
+#from indoor_temp import get_indoor_temperature
 from send_push import push
 
 CRED_DIR = os.path.expanduser("~")
@@ -41,7 +41,9 @@ else:
     logging.info(f"No API Credentials found in: {push_api_cred_file} - Check README file for setup instuctions")
 
 
-indoor = round(float(get_indoor_temperature()['temperature']))
+
+#indoor = round(float(get_indoor_temperature()['temperature']))
+indoor = 70
 outdoor = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature))
 hour = int(date.strftime("%H"))
 
