@@ -102,7 +102,7 @@ if boundary == "open":
         with open(lock_file_location, 'r') as f:
             lock_file_contents = f.readlines()
             lock_file_contents = [e.strip() for e in lock_file_contents]
-        if lock_file_contents[0] == date.strftime("%b %d, %Y") and lock_file_contents[1] == "open"):
+        if lock_file_contents[0] == date.strftime("%b %d, %Y") and lock_file_contents[1] == "open":
             print("Found lockfile. Has notification already been sent?")
             logging.info("Found lockfile. Has notification already been sent today?")
             logging.info(f"Lockfile Location: {lock_file_location}")
