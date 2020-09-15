@@ -4,15 +4,15 @@ import logging
 from datetime import datetime
 
 from weather_api import weather
-#from indoor_temp import get_indoor_temperature
+from indoor_temp import get_indoor_temperature
 from send_push import push
 
 CRED_DIR = os.path.expanduser("~")
 api_key_file = "{0}/.openweatherapi.txt".format(CRED_DIR)
 push_api_cred_file = "{0}/.openwindows_push_api.txt".format(CRED_DIR)
 SCRIPT_EXC_DIR = os.path.dirname(os.path.realpath(__file__))
-lock_file_location = "{0}/push1.lock".format(SCRIPT_EXC_DIR)
-log_dir = f'{SCRIPT_EXC_DIR}/app1.log'
+lock_file_location = "{0}/push.lock".format(SCRIPT_EXC_DIR)
+log_dir = f'{SCRIPT_EXC_DIR}/app.log'
 LOCAL_ZIPCODE = "97477,us"
 date = datetime.now()
 
@@ -42,29 +42,27 @@ else:
 
 
 
-#indoor = round(float(get_indoor_temperature()['temperature']))
-indoor = 70
+indoor = round(float(get_indoor_temperature()['temperature']))
 outdoor = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature))
-hour = int(date.strftime("%H"))
 
+hour = int(date.strftime("%H"))
 DEGREE_BUFFER = 2
 
 
 def get_time_boundary(h):
+    '''
+    Calculates if operation is happening in the in the morning or evening and returns if the windows should be open or closed.
+    '''
     if h >= 8 and h <= 4:
         return "close"
-    if h >= 5 and h <= 11:
+    if h >= 17 and h <= 23:
         return "open"
     return "OOB"
 
 
-
-
-
-#outside = weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)
-#indoor =  indoor_temp()
 message = f"Inside: {indoor} || Outside: {outdoor} || Outside Adjusted: {outdoor - DEGREE_BUFFER}"
 boundary = get_time_boundary(hour)
+print(boundary)
 if  boundary == "close":
     if os.path.isfile(lock_file_location):
         with open(lock_file_location, 'r') as f:
