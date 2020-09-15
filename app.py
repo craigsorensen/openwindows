@@ -62,7 +62,7 @@ def get_time_boundary(h):
 
 message = f"Inside: {indoor} || Outside: {outdoor} || Outside Adjusted: {outdoor - DEGREE_BUFFER}"
 boundary = get_time_boundary(hour)
-print(boundary)
+
 if  boundary == "close":
     if os.path.isfile(lock_file_location):
         with open(lock_file_location, 'r') as f:
@@ -128,3 +128,7 @@ if boundary == "open":
         print("It's WARMER outside, recommend doing nothing!")
         logging.info(message)
         logging.info("It's WARMER outside, recommend doing nothing!")
+
+if boundary == "OOB":
+        print("Not in operational boundary.")
+        logging.info(f"OOB: {message})
