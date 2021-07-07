@@ -6,15 +6,23 @@ from datetime import datetime
 from weather_api import weather
 from indoor_temp import get_indoor_temperature
 from send_push import push
+from dbman import db
 
 CRED_DIR = os.path.expanduser("~")
 api_key_file = "{0}/.openweatherapi.txt".format(CRED_DIR)
 push_api_cred_file = "{0}/.openwindows_push_api.txt".format(CRED_DIR)
 SCRIPT_EXC_DIR = os.path.dirname(os.path.realpath(__file__))
-lock_file_location = "{0}/push.lock".format(SCRIPT_EXC_DIR)
+db_path = "{0}/tempdb.json".format(SCRIPT_EXC_DIR)
 log_dir = f'{SCRIPT_EXC_DIR}/app.log'
 LOCAL_ZIPCODE = "97477,us"
 date = datetime.now()
+pretty_date = date.strftime("%b-%d-%Y") #Nov-01-2021
+
+OUTSIDE_DEGREE_BUFFER = 2
+OUTSIDE_DEGREE_TRIGGER = 80
+DEGREE_DELTA = 5
+
+print(db_path)
 
 # Setup logging
 logging.basicConfig(filename=log_dir, format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s', level=logging.DEBUG)
@@ -42,12 +50,12 @@ else:
 
 
 
-indoor = round(float(get_indoor_temperature()['temperature']))
-outdoor = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature))
+indoor_temp = round(float(get_indoor_temperature()['temperature']))
+outdoor_temp = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature))
+
 
 hour = int(date.strftime("%H"))
-DEGREE_BUFFER = 2
-
+message = f"Inside: {indoor_temp} || Outside: {outdoor_temp} || Outside Adjusted: {outdoor_temp - OUTSIDE_DEGREE_BUFFER}"
 
 def get_time_boundary(h):
     '''
@@ -59,75 +67,100 @@ def get_time_boundary(h):
         return "open"
     return "OOB"
 
+def get_notification_lock_status(db):
+    # manage the lockfile. Update it, or delete it if it's old.
 
-message = f"Inside: {indoor} || Outside: {outdoor} || Outside Adjusted: {outdoor - DEGREE_BUFFER}"
+    if db["notification_sent"]:
+        print("Notification has already been sent.")
+        logging.info("Notification has already been sent.")
+        quit()
+    else:
+        return False
+
+
 boundary = get_time_boundary(hour)
+dbman = db.db_manager(db_path)
 
-if  boundary == "close":
-    if os.path.isfile(lock_file_location):
-        with open(lock_file_location, 'r') as f:
-            lock_file_contents = f.readlines()
-            lock_file_contents = [e.strip() for e in lock_file_contents]
-        if lock_file_contents[0] == date.strftime("%b %d, %Y"):
-            print("Found lockfile. Has notification already been sent?")
-            logging.info("Found lockfile. Has notification already been sent today?")
-            logging.info(f"Lockfile Location: {lock_file_location}")
-            logging.info(f"Lockdate: {lock_file_contents}")
-            quit()
-        else:
-            print("Old lockfile found, removing!")
-            logging.info("Old lockfile found, removing!")
-            os.remove(lock_file_location)
-    if (outdoor - DEGREE_BUFFER) >= indoor:
+print("Checking if tempurature db exists..")
+logging.debug("Checking if tempurature db exists..")
+if(dbman.check_if_db_file_exists()):
+    tempdb = dbman.get_db()
+    # check if tempdb was created today, if not purge the data and start fresh.
+    print(f"db creation date: {tempdb['db_creation_date']}")
+    logging.debug(f"db creation date: {tempdb['db_creation_date']}")
+    if tempdb['db_creation_date'] != pretty_date:
+        print(f"db was not created today, must have old data. Will be recreated!")
+        logging.info(f"db was not created today, must have old data. Will be recreated!")
+        tempdb = dbman.create_blank_db()
+        dbman.write_database_to_disk(tempdb)
+else:
+    print("No database found, creating!")
+    logging.debug("No database found, creating!")
+    tempdb = dbman.create_blank_db()
+    dbman.write_database_to_disk(tempdb)
+
+
+# Check if db tempratures need to be updated, if so update them.
+if indoor_temp > tempdb['indoor_max_temp']:
+    print('Indoor temp is higher than temp, in db. updating record.')
+    logging.info('Indoor temp is higher than temp, in db. updating record.')
+    tempdb['indoor_max_temp'] = indoor_temp
+    dbman.write_database_to_disk(tempdb)
+    tempdb = dbman.get_db()
+if outdoor_temp > tempdb['outdoor_max_temp']:
+    print('Outdoor temp is higher than temp, in db. updating record.')
+    logging.info('Outdoor temp is higher than temp, in db. updating record.')
+    tempdb['outdoor_max_temp'] = outdoor_temp
+    dbman.write_database_to_disk(tempdb)
+    tempdb = dbman.get_db()
+
+# Get the inside to outside tempurature difference. Used for temp algo below.
+daily_delta = tempdb['outdoor_max_temp'] - tempdb['indoor_max_temp']
+
+if boundary == "close":
+    get_notification_lock_status(tempdb)
+    if (outdoor_temp - OUTSIDE_DEGREE_BUFFER) >= indoor_temp:
         # close windows
         print(f"CLOSE WINDOWS! {message}")
         push.send(TOKEN, USER, f"CLOSE WINDOWS! {message}")
         print("Sent Close windows notification")
-
-        logging.debug(f"Writing lock file - date: {date.strftime('%b %d, %Y')} status: {boundary}")
-    
-        with open(lock_file_location, 'w') as f:
-            f.write(date.strftime("%b %d, %Y")+"\n")
-            f.write(f"{boundary}\n")
+        logging.debug(f"Updating notification status in DB.")
+        tempdb['notification_sent'] = True
+        dbman.write_database_to_disk(tempdb)
     else:
         #log temp and do nothing
         print(message)
         print("It's colder outside, recommend doing nothing!")
         logging.info(message)
         logging.info("It's colder outside, recommend doing nothing!")
-        
+
 
 if boundary == "open":
-    if os.path.isfile(lock_file_location):
-        with open(lock_file_location, 'r') as f:
-            lock_file_contents = f.readlines()
-            lock_file_contents = [e.strip() for e in lock_file_contents]
-        if lock_file_contents[0] == date.strftime("%b %d, %Y") and lock_file_contents[1] == "open":
-            print("Found lockfile. Has notification already been sent?")
-            logging.info("Found lockfile. Has notification already been sent today?")
-            logging.info(f"Lockfile Location: {lock_file_location}")
-            logging.info(f"Lockdate: {lock_file_contents}")
-            quit()
-        else:
-            print("Old lockfile found, removing!")
-            logging.info("Old lockfile found, removing!")
-            os.remove(lock_file_location)
-    if (outdoor - DEGREE_BUFFER) <= indoor:
-        print(message)
-        push.send(TOKEN, USER, f"OPEN WINDOWS {message}")
-        print("Sent OPEN windows notification")
-        logging.debug(f"Writing lock file - date: {date.strftime('%b %d, %Y')} status: {boundary}")
-    
-        with open(lock_file_location, 'w') as f:
-            f.write(date.strftime("%b %d, %Y")+"\n")
-            f.write(f"{boundary}\n")
+    get_notification_lock_status(tempdb)
 
+    # If outside daytime high temp is $delta degrees higher than inside daytime high temp and
+    # outside daytime high is above $trigger_temp
+    print(f"daily_delta: {daily_delta} DEGREE_DELTA: {DEGREE_DELTA} outdoor_max: {tempdb['outdoor_max_temp']} out_deg_trig: {OUTSIDE_DEGREE_TRIGGER}")
+    logging.debug(f"daily_delta: {daily_delta} DEGREE_DELTA: {DEGREE_DELTA} outdoor_max: {tempdb['outdoor_max_temp']} out_deg_trig: {OUTSIDE_DEGREE_TRIGGER}")
+    if daily_delta >= DEGREE_DELTA and tempdb['outdoor_max_temp'] >= OUTSIDE_DEGREE_TRIGGER:
+        #check to see if it's cooled off outside
+        if (outdoor_temp - OUTSIDE_DEGREE_BUFFER) <= indoor_temp:
+            print(message)
+            push.send(TOKEN, USER, f"OPEN WINDOWS {message}")
+            print("Sent OPEN windows notification")
+            logging.debug(f"Updating Notification Status in DB - date: {date.strftime('%b %d, %Y')} status: {boundary}")
+            tempdb['notification_sent'] = True
+            dbman.write_database_to_disk(tempdb)
+        # Nope still hot outside
+        else:
+            #log temp and do nothing
+            print(message)
+            print("It's WARMER outside, recommend doing nothing!")
+            logging.info(message)
+            logging.info("It's WARMER outside, recommend doing nothing!")
     else:
-        #log temp and do nothing
-        print(message)
-        print("It's WARMER outside, recommend doing nothing!")
-        logging.info(message)
-        logging.info("It's WARMER outside, recommend doing nothing!")
+        print("It's was not hot enough outside yet to trigger the window opening procedural calls. Recommend doing nothing!")
+        logging.info("It's was not hot enough outside yet to trigger the window opening procedural calls. Recommend doing nothing!")
 
 if boundary == "OOB":
         print("Not in operational boundary.")
