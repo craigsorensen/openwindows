@@ -134,3 +134,4 @@ dmypy.json
 # Local
 
 .lock
+tempdb.json

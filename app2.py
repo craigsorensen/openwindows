@@ -47,7 +47,8 @@ else:
 
 
 indoor_temp = round(float(get_indoor_temperature()['temperature']))
-outdoor_temp = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature))
+# outdoor_temp = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature))
+outdoor_temp = 65
 
 hour = int(date.strftime("%H"))
 DEGREE_BUFFER = 2
