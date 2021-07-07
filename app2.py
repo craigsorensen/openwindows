@@ -17,6 +17,7 @@ log_dir = f'{SCRIPT_EXC_DIR}/app.log'
 LOCAL_ZIPCODE = "97477,us"
 date = datetime.now()
 
+print(db_path)
 
 
 # Setup logging

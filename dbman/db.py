@@ -53,26 +53,24 @@ class db_manager():
 
 ## Main ##
 
-dbman = db_manager(temp_db_location)
-
-print("Checking if tempdb exists..")
-if(dbman.check_if_db_file_exists()):
-    tempdb = dbman.get_db()
-    # check if tempdb was created today, if not purge the data and start fresh.
-    print(f"db creation date: {tempdb['db_creation_date']}")
-else:
-    print("No database found, creating!")
-    tempdb = dbman.create_blank_db()
+# print("Checking if tempdb exists..")
+# if(dbman.check_if_db_file_exists()):
+#     tempdb = dbman.get_db()
+#     # check if tempdb was created today, if not purge the data and start fresh.
+#     print(f"db creation date: {tempdb['db_creation_date']}")
+# else:
+#     print("No database found, creating!")
+#     tempdb = dbman.create_blank_db()
 
 
-if tempdb['db_creation_date'] == pretty_date:
-    print("database was created today.. lets use it")
-else:
-    print("old database data found. Purge!")
-    tempdb = dbman.create_blank_db()
-    dbman.write_database_to_disk(tempdb)
-    print("loading new db from disk")
-    tempdb = dbman.get_db()
+# if tempdb['db_creation_date'] == pretty_date:
+#     print("database was created today.. lets use it")
+# else:
+#     print("old database data found. Purge!")
+#     tempdb = dbman.create_blank_db()
+#     dbman.write_database_to_disk(tempdb)
+#     print("loading new db from disk")
+#     tempdb = dbman.get_db()
 
 
 
