@@ -18,11 +18,20 @@ LOCAL_ZIPCODE = "97477,us"
 date = datetime.now()
 pretty_date = date.strftime("%b-%d-%Y") #Nov-01-2021
 
+# used to compensate for opening windows when it's still too warm outside. This works by taking the outside
+# temperature and subtracting the OUTSIDE_DEGREE_BUFFER. Then using that value for logic. Set to 0 to disable buffer.
 OUTSIDE_DEGREE_BUFFER = 2
+
+# use these two values for tuning the open window logic:
+
+# used to set the open window trigger point. Ouside temp must reach at least OUTIDE_DEGREE_TRIGGER degrees
 OUTSIDE_DEGREE_TRIGGER = 80
+# used to set the difference between outside and inside temp delta as a secondary trigger.
+# outside temp must be at least DEGREE_DELTA higher than inside temp
 DEGREE_DELTA = 5
 
-print(db_path)
+print(f"DB Path: {db_path}")
+logging.debug(f"DB Path: {db_path}")
 
 # Setup logging
 logging.basicConfig(filename=log_dir, format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s', level=logging.DEBUG)
