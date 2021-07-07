@@ -86,7 +86,7 @@ if(dbman.check_if_db_file_exists()):
 else:
     print("No database found, creating!")
     tempdb = dbman.create_blank_db()
-    dbman.write_database_to_disk()
+    dbman.write_database_to_disk(tempdb)
 
 
 # Check if db tempratures need to be updated, if so update them.
