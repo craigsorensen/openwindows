@@ -2,19 +2,8 @@ import json
 import os
 
 from datetime import datetime
-# get temps
-# check for max_temp_file, if not found, create.
-# get previous max temps
-# if current outside temp is higher than previous, update max_temp_file
-# if current inside temp is higher than previous, update max_temp_file
-# if outside temp is higher than highest inside temp + buffer, set send notification to true
 
 #variables
-indoor_temp = 71
-outdoor_temp = 81
-temp_buffer = 5
-
-
 date = datetime.now() # get current date/time
 pretty_date = date.strftime("%b-%d-%Y") #Nov-01-2021
 
@@ -50,22 +39,3 @@ class db_manager():
         # nope, return false.
         print(f"db not found in: {self.db_location}")
         return False
-
-## Main ##
-
-
-
-
-# if tempdb['db_creation_date'] == pretty_date:
-#     print("database was created today.. lets use it")
-# else:
-#     print("old database data found. Purge!")
-#     tempdb = dbman.create_blank_db()
-#     dbman.write_database_to_disk(tempdb)
-#     print("loading new db from disk")
-#     tempdb = dbman.get_db()
-
-
-
-# Check if notification should be sent
-# Current process is if outside temp is was ever 10 degrees warmer than inside.
