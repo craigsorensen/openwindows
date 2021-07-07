@@ -110,7 +110,7 @@ if boundary == "close":
         print("Sent Close windows notification")
         logging.debug(f"Writing lock file - date: {date.strftime('%b %d, %Y')} status: {boundary}")
         tempdb['notification_sent'] = True
-        db.dbman.write_database_to_disk()
+        dbman.write_database_to_disk(tempdb)
     else:
         #log temp and do nothing
         print(message)
@@ -120,16 +120,14 @@ if boundary == "close":
 
 
 if boundary == "open":
-    manage_lockfile(lock_file_location)
+    get_notification_lock_status(tempdb)
     if (outdoor_temp - DEGREE_BUFFER) <= indoor_temp:
         print(message)
         push.send(TOKEN, USER, f"OPEN WINDOWS {message}")
         print("Sent OPEN windows notification")
-        logging.debug(f"Writing lock file - date: {date.strftime('%b %d, %Y')} status: {boundary}")
-
-        with open(lock_file_location, 'w') as f:
-            f.write(date.strftime("%b %d, %Y")+"\n")
-            f.write(f"{boundary}\n")
+        logging.debug(f"Updating Notification Status - date: {date.strftime('%b %d, %Y')} status: {boundary}")
+        tempdb['notification_sent'] = True
+        dbman.write_database_to_disk(tempdb)
 
     else:
         #log temp and do nothing
