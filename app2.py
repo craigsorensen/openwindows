@@ -50,8 +50,8 @@ else:
 
 
 indoor_temp = round(float(get_indoor_temperature()['temperature']))
-# outdoor_temp = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature))
-outdoor_temp = 65
+outdoor_temp = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature))
+
 
 hour = int(date.strftime("%H"))
 message = f"Inside: {indoor_temp} || Outside: {outdoor_temp} || Outside Adjusted: {outdoor_temp - OUTSIDE_DEGREE_BUFFER}"
