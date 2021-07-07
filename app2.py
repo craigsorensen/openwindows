@@ -84,8 +84,6 @@ dbman = db.db_manager(db_path)
 print("Checking if tempurature db exists..")
 logging.debug("Checking if tempurature db exists..")
 if(dbman.check_if_db_file_exists()):
-    print("db was found.")
-    logging.debug("db was found!")
     tempdb = dbman.get_db()
     # check if tempdb was created today, if not purge the data and start fresh.
     print(f"db creation date: {tempdb['db_creation_date']}")
