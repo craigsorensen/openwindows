@@ -75,7 +75,7 @@ def get_notification_lock_status(db):
 
 
 boundary = get_time_boundary(hour)
-tempdb = db.dbman(db_path)
+tempdb = db.get_db(db_path)
 
 # Check if db tempratures need to be updated, if so update them.
 if indoor_temp > tempdb['indoor_max_temp']:
