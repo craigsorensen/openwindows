@@ -76,6 +76,16 @@ def get_notification_lock_status(db):
 
 boundary = get_time_boundary(hour)
 dbman = db.db_manager(db_path)
+
+print("Checking if tempurature db exists..")
+if(dbman.check_if_db_file_exists()):
+    print("db was found.")
+    tempdb = dbman.get_db()
+    # check if tempdb was created today, if not purge the data and start fresh.
+    print(f"db creation date: {tempdb['db_creation_date']}")
+else:
+    print("No database found, creating!")
+    tempdb = dbman.create_blank_db()
 tempdb = dbman.get_db()
 
 # Check if db tempratures need to be updated, if so update them.

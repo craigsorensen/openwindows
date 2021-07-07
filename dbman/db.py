@@ -53,14 +53,7 @@ class db_manager():
 
 ## Main ##
 
-# print("Checking if tempdb exists..")
-# if(dbman.check_if_db_file_exists()):
-#     tempdb = dbman.get_db()
-#     # check if tempdb was created today, if not purge the data and start fresh.
-#     print(f"db creation date: {tempdb['db_creation_date']}")
-# else:
-#     print("No database found, creating!")
-#     tempdb = dbman.create_blank_db()
+
 
 
 # if tempdb['db_creation_date'] == pretty_date:
