@@ -132,7 +132,7 @@ if boundary == "open":
 
     # If outside daytime high temp is $delta degrees higher than inside daytime high temp and
     # outside daytime high is above $trigger_temp
-    if daily_delta >= DEGREE_DELTA and tempdb['outside_max_temp'] <= OUTSIDE_DEGREE_TRIGGER:
+    if daily_delta >= DEGREE_DELTA and tempdb['outdoor_max_temp'] <= OUTSIDE_DEGREE_TRIGGER:
         #check to see if it's cooled off outside
         if (outdoor_temp - OUTSIDE_DEGREE_BUFFER) <= indoor_temp:
             print(message)
