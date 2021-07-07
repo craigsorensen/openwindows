@@ -16,6 +16,7 @@ db_path = "{0}/tempdb.json".format(SCRIPT_EXC_DIR)
 log_dir = f'{SCRIPT_EXC_DIR}/app.log'
 LOCAL_ZIPCODE = "97477,us"
 date = datetime.now()
+pretty_date = date.strftime("%b-%d-%Y") #Nov-01-2021
 
 OUTSIDE_DEGREE_BUFFER = 2
 OUTSIDE_DEGREE_TRIGGER = 80
@@ -89,6 +90,11 @@ if(dbman.check_if_db_file_exists()):
     # check if tempdb was created today, if not purge the data and start fresh.
     print(f"db creation date: {tempdb['db_creation_date']}")
     logging.debug(f"db creation date: {tempdb['db_creation_date']}")
+    if tempdb['db_creation_date'] != pretty_date:
+        print(f"db was not created today, must have old data. Will be recreated!")
+        logging.info(f"db was not created today, must have old data. Will be recreated!")
+        tempdb = dbman.create_blank_db()
+        dbman.write_database_to_disk(tempdb)
 else:
     print("No database found, creating!")
     logging.debug("No database found, creating!")
