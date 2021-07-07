@@ -107,7 +107,7 @@ if outdoor_temp > tempdb['outdoor_max_temp']:
     tempdb = dbman.get_db()
 
 # Get the inside to outside tempurature difference. Used for temp algo below.
-daily_delta = tempdb['oudoor_max_temp'] - tempdb['indoor_max_temp']
+daily_delta = tempdb['outdoor_max_temp'] - tempdb['indoor_max_temp']
 
 if boundary == "close":
     get_notification_lock_status(tempdb)
