@@ -17,6 +17,11 @@ log_dir = f'{SCRIPT_EXC_DIR}/app.log'
 LOCAL_ZIPCODE = "97477,us"
 date = datetime.now()
 
+OUTSIDE_DEGREE_BUFFER = 2
+OUTSIDE_DEGREE_TRIGGER = 80
+DEGREE_DELTA = 5
+
+
 print(db_path)
 
 
@@ -51,8 +56,7 @@ indoor_temp = round(float(get_indoor_temperature()['temperature']))
 outdoor_temp = 65
 
 hour = int(date.strftime("%H"))
-DEGREE_BUFFER = 2
-message = f"Inside: {indoor_temp} || Outside: {outdoor_temp} || Outside Adjusted: {outdoor_temp - DEGREE_BUFFER}"
+message = f"Inside: {indoor_temp} || Outside: {outdoor_temp} || Outside Adjusted: {outdoor_temp - OUTSIDE_DEGREE_BUFFER}"
 
 def get_time_boundary(h):
     '''
@@ -102,9 +106,12 @@ if outdoor_temp > tempdb['outdoor_max_temp']:
     dbman.write_database_to_disk(tempdb)
     tempdb = dbman.get_db()
 
+# Get the inside to outside tempurature difference. Used for temp algo below.
+daily_delta = tempdb['oudoor_max_temp'] - tempdb['indoor_max_temp']
+
 if boundary == "close":
     get_notification_lock_status(tempdb)
-    if (outdoor_temp - DEGREE_BUFFER) >= indoor_temp:
+    if (outdoor_temp - OUTSIDE_DEGREE_BUFFER) >= indoor_temp:
         # close windows
         print(f"CLOSE WINDOWS! {message}")
         push.send(TOKEN, USER, f"CLOSE WINDOWS! {message}")
@@ -122,20 +129,27 @@ if boundary == "close":
 
 if boundary == "open":
     get_notification_lock_status(tempdb)
-    if (outdoor_temp - DEGREE_BUFFER) <= indoor_temp:
-        print(message)
-        push.send(TOKEN, USER, f"OPEN WINDOWS {message}")
-        print("Sent OPEN windows notification")
-        logging.debug(f"Updating Notification Status - date: {date.strftime('%b %d, %Y')} status: {boundary}")
-        tempdb['notification_sent'] = True
-        dbman.write_database_to_disk(tempdb)
 
+    # If outside daytime high temp is $delta degrees higher than inside daytime high temp and
+    # outside daytime high is above $trigger_temp
+    if daily_delta >= DEGREE_DELTA and tempdb['outside_max_temp'] <= OUTSIDE_DEGREE_TRIGGER:
+        #check to see if it's cooled off outside
+        if (outdoor_temp - OUTSIDE_DEGREE_BUFFER) <= indoor_temp:
+            print(message)
+            push.send(TOKEN, USER, f"OPEN WINDOWS {message}")
+            print("Sent OPEN windows notification")
+            logging.debug(f"Updating Notification Status - date: {date.strftime('%b %d, %Y')} status: {boundary}")
+            tempdb['notification_sent'] = True
+            dbman.write_database_to_disk(tempdb)
+        # Nope still hot outside
+        else:
+            #log temp and do nothing
+            print(message)
+            print("It's WARMER outside, recommend doing nothing!")
+            logging.info(message)
+            logging.info("It's WARMER outside, recommend doing nothing!")
     else:
-        #log temp and do nothing
-        print(message)
-        print("It's WARMER outside, recommend doing nothing!")
-        logging.info(message)
-        logging.info("It's WARMER outside, recommend doing nothing!")
+        print("It's was not hot enough outside yet to trigger the window opening procedural calls. Recommend doing nothing!")
 
 if boundary == "OOB":
         print("Not in operational boundary.")
