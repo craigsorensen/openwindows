@@ -42,6 +42,7 @@ OUTSIDE_DEGREE_TRIGGER = 80
 # outside temp must be at least DEGREE_DELTA higher than inside temp
 DEGREE_DELTA = 5
 
+print(f"log file: {log_dir}")
 print(f"DB Path: {db_path}")
 logging.debug(f"DB Path: {db_path}")
 
