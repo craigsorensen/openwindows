@@ -42,12 +42,13 @@ OUTSIDE_DEGREE_TRIGGER = 80
 # outside temp must be at least DEGREE_DELTA higher than inside temp
 DEGREE_DELTA = 5
 
+# Setup logging
+logging.basicConfig(filename=log_dir, format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s', level=logging.DEBUG)
+
+
 print(f"log file: {log_dir}")
 print(f"DB Path: {db_path}")
 logging.debug(f"DB Path: {db_path}")
-
-# Setup logging
-logging.basicConfig(filename=log_dir, format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s', level=logging.DEBUG)
 
 # Get weather API credentials from disk
 if os.path.isfile(api_key_file):
