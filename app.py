@@ -8,13 +8,25 @@ from indoor_temp import get_indoor_temperature
 from send_push import push
 from dbman import db
 
+#### Define paths and file locations
+
+#where cred files are located
 CRED_DIR = os.path.expanduser("~")
+# Weatherapi key file
 api_key_file = "{0}/.openweatherapi.txt".format(CRED_DIR)
+# Pushover cred file
 push_api_cred_file = "{0}/.openwindows_push_api.txt".format(CRED_DIR)
+# Detect script execution directory
 SCRIPT_EXC_DIR = os.path.dirname(os.path.realpath(__file__))
+# Temperature DB file location
 db_path = "{0}/tempdb.json".format(SCRIPT_EXC_DIR)
-log_dir = f'{SCRIPT_EXC_DIR}/app.log'
+# Log file location
+log_dir = f"{SCRIPT_EXC_DIR}/app.log"
+
+### Random important variables
+# Weather location for use with Open Weather API
 LOCAL_ZIPCODE = "97477,us"
+# Date and formatted date
 date = datetime.now()
 pretty_date = date.strftime("%b-%d-%Y") #Nov-01-2021
 
@@ -57,11 +69,8 @@ else:
     print(f"No API Credentials found in: {push_api_cred_file} - Check README file for setup instuctions")
     logging.info(f"No API Credentials found in: {push_api_cred_file} - Check README file for setup instuctions")
 
-
-
 indoor_temp = round(float(get_indoor_temperature()['temperature']))
 outdoor_temp = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).temperature))
-
 
 hour = int(date.strftime("%H"))
 message = f"Inside: {indoor_temp} || Outside: {outdoor_temp} || Outside Adjusted: {outdoor_temp - OUTSIDE_DEGREE_BUFFER}"
