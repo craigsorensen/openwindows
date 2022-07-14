@@ -78,6 +78,7 @@ outdoor_temp = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).te
 hour = int(date.strftime("%H"))
 message = f"Inside: {indoor_temp} || Outside: {outdoor_temp} || Outside Adjusted: {outdoor_temp - OUTSIDE_DEGREE_BUFFER}"
 logging.info(message)
+print(message)
 
 def get_time_boundary(h):
     '''
