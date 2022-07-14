@@ -12,8 +12,9 @@ from dbman import db
 
 #where cred files are located
 CRED_DIR = os.path.expanduser("~")
-# Weatherapi key file
-api_key_file = "{0}/.openweatherapi.txt".format(CRED_DIR)
+## Weatherapi key file
+#api_key_file = "{0}/.openweatherapi.txt".format(CRED_DIR)
+api_key_file = "{0}/.config/.weatherapi.txt".format(CRED_DIR)
 # Pushover cred file
 push_api_cred_file = "{0}/.openwindows_push_api.txt".format(CRED_DIR)
 # Detect script execution directory
