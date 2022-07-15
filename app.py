@@ -26,7 +26,10 @@ log_dir = f"{SCRIPT_EXC_DIR}/app.log"
 
 ### Random important variables
 # Weather location for use with Open Weather API
-LOCAL_ZIPCODE = "97477,us"
+#LOCAL_ZIPCODE = "97477,us"
+# Weather location for use with WeatherAPI.com
+LOCAL_ZIPCODE = "97477"
+
 # Date and formatted date
 date = datetime.now()
 pretty_date = date.strftime("%b-%d-%Y") #Nov-01-2021
