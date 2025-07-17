@@ -1,8 +1,6 @@
 import os
 import logging
-
 from datetime import datetime
-
 from weather_api import weather
 from indoor_temp import get_indoor_temperature
 from send_push import push
@@ -45,7 +43,6 @@ DEGREE_DELTA = 5
 # Setup logging
 logging.basicConfig(filename=log_dir, format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s', level=logging.DEBUG)
 
-
 print(f"log file: {log_dir}")
 print(f"DB Path: {db_path}")
 logging.debug(f"DB Path: {db_path}")
@@ -79,17 +76,16 @@ message = f"Inside: {indoor_temp} || Outside: {outdoor_temp} || Outside Adjusted
 
 def get_time_boundary(h):
     '''
-    Calculates if operation is happening in the in the morning or evening and returns if the windows should be open or closed.
+    Calculates if operation is happening in the morning or evening and returns if the windows should be open or closed.
     '''
-    if h >= 8 and h <= 4:
+    if 6 <= h < 14:  # Morning: 6 AM to 1:59 PM
         return "close"
-    if h >= 17 and h <= 23:
+    if 18 <= h < 24:  # Evening: 6 PM to 11:59 PM
         return "open"
     return "OOB"
 
 def get_notification_lock_status(db):
     # manage the lockfile. Update it, or delete it if it's old.
-
     if db["notification_sent"]:
         print("Notification has already been sent.")
         logging.info("Notification has already been sent.")
@@ -97,12 +93,11 @@ def get_notification_lock_status(db):
     else:
         return False
 
-
 boundary = get_time_boundary(hour)
 dbman = db.db_manager(db_path)
 
-print("Checking if tempurature db exists..")
-logging.debug("Checking if tempurature db exists..")
+print("Checking if temperature db exists..")
+logging.debug("Checking if temperature db exists..")
 if(dbman.check_if_db_file_exists()):
     tempdb = dbman.get_db()
     # check if tempdb was created today, if not purge the data and start fresh.
@@ -119,22 +114,21 @@ else:
     tempdb = dbman.create_blank_db()
     dbman.write_database_to_disk(tempdb)
 
-
-# Check if db tempratures need to be updated, if so update them.
+# Check if db temperatures need to be updated, if so update them.
 if indoor_temp > tempdb['indoor_max_temp']:
-    print('Indoor temp is higher than temp, in db. updating record.')
-    logging.info('Indoor temp is higher than temp, in db. updating record.')
+    print('Indoor temp is higher than temp in db. updating record.')
+    logging.info('Indoor temp is higher than temp in db. updating record.')
     tempdb['indoor_max_temp'] = indoor_temp
     dbman.write_database_to_disk(tempdb)
     tempdb = dbman.get_db()
 if outdoor_temp > tempdb['outdoor_max_temp']:
-    print('Outdoor temp is higher than temp, in db. updating record.')
-    logging.info('Outdoor temp is higher than temp, in db. updating record.')
+    print('Outdoor temp is higher than temp in db. updating record.')
+    logging.info('Outdoor temp is higher than temp in db. updating record.')
     tempdb['outdoor_max_temp'] = outdoor_temp
     dbman.write_database_to_disk(tempdb)
     tempdb = dbman.get_db()
 
-# Get the inside to outside tempurature difference. Used for temp algo below.
+# Get the inside to outside temperature difference. Used for temp algo below.
 daily_delta = tempdb['outdoor_max_temp'] - tempdb['indoor_max_temp']
 
 if boundary == "close":
@@ -148,22 +142,20 @@ if boundary == "close":
         tempdb['notification_sent'] = True
         dbman.write_database_to_disk(tempdb)
     else:
-        #log temp and do nothing
+        # log temp and do nothing
         print(message)
         print("It's colder outside, recommend doing nothing!")
         logging.info(message)
         logging.info("It's colder outside, recommend doing nothing!")
 
-
 if boundary == "open":
     get_notification_lock_status(tempdb)
-
     # If outside daytime high temp is $delta degrees higher than inside daytime high temp and
     # outside daytime high is above $trigger_temp
     print(f"daily temp delta: {daily_delta} DEGREE_DELTA setpoint: {DEGREE_DELTA} outdoor_max: {tempdb['outdoor_max_temp']} out_deg_trig: {OUTSIDE_DEGREE_TRIGGER}")
     logging.debug(f"daily temp delta: {daily_delta} DEGREE_DELTA setpoint: {DEGREE_DELTA} outdoor_max: {tempdb['outdoor_max_temp']} out_deg_trig: {OUTSIDE_DEGREE_TRIGGER}")
     if daily_delta >= DEGREE_DELTA and tempdb['outdoor_max_temp'] >= OUTSIDE_DEGREE_TRIGGER:
-        #check to see if it's cooled off outside
+        # check to see if it's cooled off outside
         if (outdoor_temp - OUTSIDE_DEGREE_BUFFER) <= indoor_temp:
             print(message)
             push.send(TOKEN, USER, f"OPEN WINDOWS {message}")
@@ -173,15 +165,15 @@ if boundary == "open":
             dbman.write_database_to_disk(tempdb)
         # Nope still hot outside
         else:
-            #log temp and do nothing
+            # log temp and do nothing
             print(message)
             print("It's WARMER outside, recommend doing nothing!")
             logging.info(message)
             logging.info("It's WARMER outside, recommend doing nothing!")
     else:
-        print("It's was not hot enough outside yet to trigger the window opening procedural calls. Recommend doing nothing!")
-        logging.info("It's was not hot enough outside yet to trigger the window opening procedural calls. Recommend doing nothing!")
+        print("It was not hot enough outside yet to trigger the window opening procedural calls. Recommend doing nothing!")
+        logging.info("It was not hot enough outside yet to trigger the window opening procedural calls. Recommend doing nothing!")
 
 if boundary == "OOB":
-        print("Not in operational boundary.")
-        logging.info(f"OOB: {message}")
+    print("Not in operational boundary.")
+    logging.info(f"OOB: {message}")
