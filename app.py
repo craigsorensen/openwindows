@@ -10,8 +10,9 @@ from dbman import db
 
 #where cred files are located
 CRED_DIR = os.path.expanduser("~")
-# Weatherapi key file
-api_key_file = "{0}/.openweatherapi.txt".format(CRED_DIR)
+## Weatherapi key file
+#api_key_file = "{0}/.openweatherapi.txt".format(CRED_DIR)
+api_key_file = "{0}/.config/.weatherapi.txt".format(CRED_DIR)
 # Pushover cred file
 push_api_cred_file = "{0}/.openwindows_push_api.txt".format(CRED_DIR)
 # Detect script execution directory
@@ -23,7 +24,10 @@ log_dir = f"{SCRIPT_EXC_DIR}/app.log"
 
 ### Random important variables
 # Weather location for use with Open Weather API
-LOCAL_ZIPCODE = "97477,us"
+#LOCAL_ZIPCODE = "97477,us"
+# Weather location for use with WeatherAPI.com
+LOCAL_ZIPCODE = "97477"
+
 # Date and formatted date
 date = datetime.now()
 pretty_date = date.strftime("%b-%d-%Y") #Nov-01-2021
@@ -73,6 +77,8 @@ outdoor_temp = int(round((weather.WeatherMan(WEATHER_API_KEY, LOCAL_ZIPCODE)).te
 
 hour = int(date.strftime("%H"))
 message = f"Inside: {indoor_temp} || Outside: {outdoor_temp} || Outside Adjusted: {outdoor_temp - OUTSIDE_DEGREE_BUFFER}"
+logging.info(message)
+print(message)
 
 def get_time_boundary(h):
     '''
