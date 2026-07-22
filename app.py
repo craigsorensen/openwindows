@@ -8,11 +8,10 @@ Morning (6 AM - 1:59 PM): Alerts to CLOSE windows if it's getting hotter outside
 Evening (6 PM - 11:59 PM): Alerts to OPEN windows once it's cooled off outside,
     but only if it was hot enough during the day to warrant it.
 """
-
+from __future__ import annotations
 import os
 import sys
 import logging
-from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from weather_api import weather
