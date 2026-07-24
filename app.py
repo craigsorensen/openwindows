@@ -222,8 +222,11 @@ def handle_close_window(
     """
     Morning logic: if the adjusted outdoor temp has risen to meet or exceed
     the indoor temp, it's time to close the windows before more heat gets in.
+
+    The buffer is *added* in the morning to trigger earlier — we'd rather
+    close a little too soon than let hot air in.
     """
-    adjusted_outdoor = outdoor - buffer
+    adjusted_outdoor = outdoor + buffer
 
     if adjusted_outdoor >= indoor:
         logger.info("CLOSE WINDOWS — outdoor adjusted (%d) >= indoor (%d).", adjusted_outdoor, indoor)
@@ -302,11 +305,15 @@ def main() -> None:
     now = datetime.now()
     hour = now.hour
     pretty_date = now.strftime("%b-%d-%Y")
-    adjusted_outdoor = outdoor_temp - cfg.outside_degree_buffer
+    boundary = get_time_boundary(hour)
+
+    # Buffer flips direction: added in morning (close sooner), subtracted in evening (open later)
+    if boundary == "close":
+        adjusted_outdoor = outdoor_temp + cfg.outside_degree_buffer
+    else:
+        adjusted_outdoor = outdoor_temp - cfg.outside_degree_buffer
     message = f"Inside: {indoor_temp} || Outside: {outdoor_temp} || Outside Adjusted: {adjusted_outdoor}"
     logger.info(message)
-
-    boundary = get_time_boundary(hour)
 
     # Database setup
     dbman_instance = db.db_manager(db_path)
