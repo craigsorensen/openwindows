@@ -32,8 +32,8 @@ class Config:
     api_key_path: str = ".config/.weatherapi.txt"
     push_cred_path: str = ".openwindows_push_api.txt"
 
-    # Weather location (zip code for WeatherAPI.com)
-    local_zipcode: str = "97477,us"
+    # Weather location (lat,lon for WeatherAPI.com — avoids zip code ambiguity)
+    local_zipcode: str = "44.0615,-123.0170"
 
     # Compensates for the fact that it may still feel warm outside even as
     # the thermometer drops.  Subtracted from outdoor temp before comparisons.
