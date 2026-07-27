@@ -4,9 +4,15 @@ Open Windows Notification Script
 Monitors indoor and outdoor temperatures and sends push notifications
 advising when to open or close windows for optimal cooling.
 
-Morning (6 AM - 1:59 PM): Alerts to CLOSE windows if it's getting hotter outside.
-Evening (6 PM - 11:59 PM): Alerts to OPEN windows once it's cooled off outside,
-    but only if it was hot enough during the day to warrant it.
+The outdoor sensor reading is adjusted by a buffer to account for the
+air intake being warmer than the sensor location (effective temp =
+sensor + buffer).
+
+Morning (6 AM - 1:59 PM): Alerts to CLOSE windows when the effective
+    outdoor temp rises to meet or exceed indoor temp.
+Evening (6 PM - 11:59 PM): Alerts to OPEN windows when the effective
+    outdoor temp drops below both the AC setpoint and indoor temp —
+    i.e., outside air is cooler than what the AC would maintain.
 """
 from __future__ import annotations
 import os
@@ -35,18 +41,15 @@ class Config:
     # Weather location (lat,lon for WeatherAPI.com — avoids zip code ambiguity)
     local_zipcode: str = "44.0615,-123.0170"
 
-    # Compensates for the fact that it may still feel warm outside even as
-    # the thermometer drops.  Subtracted from outdoor temp before comparisons.
-    # Set to 0 to disable.
+    # The air intake runs ~2°F warmer than where the outdoor sensor is
+    # located.  This is *added* to the sensor reading to get the effective
+    # temperature of air entering the house.  Set to 0 to disable.
     outside_degree_buffer: int = 2
 
-    # The outdoor daily-high must reach at least this value (°F) before the
-    # "open windows" logic will fire.
-    outside_degree_trigger: int = 80
-
-    # The outdoor daily-high must exceed the indoor daily-high by at least
-    # this many degrees before the "open windows" logic will fire.
-    degree_delta: int = 5
+    # Your AC thermostat setpoint (°F).  The "open windows" logic only
+    # fires when the effective outdoor temp drops below this value — that's
+    # when outside air is cooler than what the AC would maintain.
+    ac_setpoint: int = 78
 
 
 # ---------------------------------------------------------------------------
@@ -220,11 +223,9 @@ def handle_close_window(
     token: str, user: str, dbman, message: str, logger: logging.Logger,
 ) -> None:
     """
-    Morning logic: if the adjusted outdoor temp has risen to meet or exceed
-    the indoor temp, it's time to close the windows before more heat gets in.
-
-    The buffer is *added* in the morning to trigger earlier — we'd rather
-    close a little too soon than let hot air in.
+    Morning logic: if the effective intake temp (sensor + buffer) has risen
+    to meet or exceed the indoor temp, it's time to close the windows before
+    more heat gets in.
     """
     adjusted_outdoor = outdoor + buffer
 
@@ -245,33 +246,35 @@ def handle_open_window(
     cfg: Config, token: str, user: str, dbman, message: str, logger: logging.Logger,
 ) -> None:
     """
-    Evening logic: if the day was hot enough (daily high exceeded trigger and
-    delta thresholds), check whether it has cooled off enough outside to open
-    the windows.
+    Evening logic: if the effective intake temp (sensor + buffer) has dropped
+    below both the AC setpoint and the current indoor temp, opening windows
+    provides free cooling that beats running the AC.
     """
-    daily_delta = tempdb["outdoor_max_temp"] - tempdb["indoor_max_temp"]
+    adjusted_outdoor = outdoor + buffer
 
     logger.debug(
-        "Daily delta: %d (need >= %d) | Outdoor max: %d (need >= %d)",
-        daily_delta, cfg.degree_delta, tempdb["outdoor_max_temp"], cfg.outside_degree_trigger,
+        "Effective intake: %d | AC setpoint: %d | Indoor: %d",
+        adjusted_outdoor, cfg.ac_setpoint, indoor,
     )
 
-    if daily_delta < cfg.degree_delta or tempdb["outdoor_max_temp"] < cfg.outside_degree_trigger:
+    if adjusted_outdoor >= cfg.ac_setpoint:
         logger.info(
-            "Day was not hot enough to trigger open-window logic. Doing nothing."
+            "Effective intake (%d) still at or above AC setpoint (%d). Doing nothing.",
+            adjusted_outdoor, cfg.ac_setpoint,
         )
         return
 
-    adjusted_outdoor = outdoor - buffer
-
-    if adjusted_outdoor <= indoor:
-        logger.info("OPEN WINDOWS — outdoor adjusted (%d) <= indoor (%d).", adjusted_outdoor, indoor)
+    if adjusted_outdoor < indoor:
+        logger.info(
+            "OPEN WINDOWS — effective intake (%d) < indoor (%d) and below AC setpoint (%d).",
+            adjusted_outdoor, indoor, cfg.ac_setpoint,
+        )
         push.send(token, user, f"OPEN WINDOWS! {message}")
         tempdb["notification_sent"] = True
         dbman.write_database_to_disk(tempdb)
     else:
         logger.info(
-            "Still warmer outside adjusted (%d) than inside (%d). Doing nothing.",
+            "Effective intake (%d) not cooler than inside (%d). Doing nothing.",
             adjusted_outdoor, indoor,
         )
 
@@ -307,12 +310,12 @@ def main() -> None:
     pretty_date = now.strftime("%b-%d-%Y")
     boundary = get_time_boundary(hour)
 
-    # Buffer flips direction: added in morning (close sooner), subtracted in evening (open later)
-    if boundary == "close":
-        adjusted_outdoor = outdoor_temp + cfg.outside_degree_buffer
-    else:
-        adjusted_outdoor = outdoor_temp - cfg.outside_degree_buffer
-    message = f"Inside: {indoor_temp} || Outside: {outdoor_temp} || Outside Adjusted: {adjusted_outdoor}"
+    # Buffer is always added: sensor reads low relative to intake air
+    adjusted_outdoor = outdoor_temp + cfg.outside_degree_buffer
+    message = (
+        f"Inside: {indoor_temp} || Outside: {outdoor_temp} || "
+        f"Effective intake: {adjusted_outdoor} || AC setpoint: {cfg.ac_setpoint}"
+    )
     logger.info(message)
 
     # Database setup
