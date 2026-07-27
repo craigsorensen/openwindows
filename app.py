@@ -14,7 +14,9 @@ Evening (6 PM - 11:59 PM): Alerts to OPEN windows when the effective
     outdoor temp drops below both the AC setpoint and indoor temp --
     i.e., outside air is cooler than what the AC would maintain.
 """
+
 from __future__ import annotations
+
 import os
 import sys
 import logging
