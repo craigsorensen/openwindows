@@ -133,14 +133,19 @@ def load_push_credentials(filepath: str, logger: logging.Logger) -> tuple[str, s
 # Temperature helpers
 # ---------------------------------------------------------------------------
 
-def fetch_indoor_temp(logger: logging.Logger) -> int:
-    """Get the current indoor temperature, or exit on failure."""
-    try:
-        raw = get_indoor_temperature()
-        return round(float(raw["temperature"]))
-    except Exception as exc:
-        logger.critical("Failed to read indoor temperature: %s", exc)
-        sys.exit(1)
+def fetch_indoor_temp(logger: logging.Logger, retries: int = 5, delay: float = 2.0) -> int:
+    """Get the current indoor temperature, retrying on sensor read failures."""
+    import time
+    for attempt in range(1, retries + 1):
+        try:
+            raw = get_indoor_temperature()
+            return round(float(raw["temperature"]))
+        except Exception as exc:
+            logger.warning("Indoor temp read failed (attempt %d/%d): %s", attempt, retries, exc)
+            if attempt < retries:
+                time.sleep(delay)
+    logger.critical("Failed to read indoor temperature after %d attempts.", retries)
+    sys.exit(1)
 
 
 def fetch_outdoor_temp(api_key: str, zipcode: str, logger: logging.Logger) -> int:
@@ -234,7 +239,7 @@ def handle_close_window(
     if adjusted_outdoor >= indoor:
         logger.info("CLOSE WINDOWS -- outdoor adjusted (%d) >= indoor (%d).", adjusted_outdoor, indoor)
         push.send(token, user, f"CLOSE WINDOWS! {message}")
-        tempdb["notification_sent"] = True
+        tempdb["close_notification_sent"] = True
         dbman.write_database_to_disk(tempdb)
     else:
         logger.info(
@@ -272,7 +277,7 @@ def handle_open_window(
             adjusted_outdoor, indoor, cfg.ac_setpoint,
         )
         push.send(token, user, f"OPEN WINDOWS! {message}")
-        tempdb["notification_sent"] = True
+        tempdb["open_notification_sent"] = True
         dbman.write_database_to_disk(tempdb)
     else:
         logger.info(
