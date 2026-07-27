@@ -11,7 +11,7 @@ sensor + buffer).
 Morning (6 AM - 1:59 PM): Alerts to CLOSE windows when the effective
     outdoor temp rises to meet or exceed indoor temp.
 Evening (6 PM - 11:59 PM): Alerts to OPEN windows when the effective
-    outdoor temp drops below both the AC setpoint and indoor temp —
+    outdoor temp drops below both the AC setpoint and indoor temp --
     i.e., outside air is cooler than what the AC would maintain.
 """
 from __future__ import annotations
@@ -38,16 +38,16 @@ class Config:
     api_key_path: str = ".config/.weatherapi.txt"
     push_cred_path: str = ".openwindows_push_api.txt"
 
-    # Weather location (lat,lon for WeatherAPI.com — avoids zip code ambiguity)
+    # Weather location (lat,lon for WeatherAPI.com -- avoids zip code ambiguity)
     local_zipcode: str = "44.0615,-123.0170"
 
-    # The air intake runs ~2°F warmer than where the outdoor sensor is
+    # The air intake runs ~2deg F warmer than where the outdoor sensor is
     # located.  This is *added* to the sensor reading to get the effective
     # temperature of air entering the house.  Set to 0 to disable.
     outside_degree_buffer: int = 2
 
-    # Your AC thermostat setpoint (°F).  The "open windows" logic only
-    # fires when the effective outdoor temp drops below this value — that's
+    # Your AC thermostat setpoint (deg F).  The "open windows" logic only
+    # fires when the effective outdoor temp drops below this value -- that's
     # when outside air is cooler than what the AC would maintain.
     ac_setpoint: int = 78
 
@@ -84,7 +84,7 @@ def load_weather_api_key(filepath: str, logger: logging.Logger) -> str:
     """Read the weather API key from disk or exit with a clear error."""
     if not os.path.isfile(filepath):
         logger.critical(
-            "No API credential file found. Expected: %s  — see README for setup instructions.",
+            "No API credential file found. Expected: %s  -- see README for setup instructions.",
             filepath,
         )
         sys.exit(1)
@@ -94,7 +94,7 @@ def load_weather_api_key(filepath: str, logger: logging.Logger) -> str:
 
     if not key:
         logger.critical(
-            "API credential file is empty: %s  — see README for setup instructions.",
+            "API credential file is empty: %s  -- see README for setup instructions.",
             filepath,
         )
         sys.exit(1)
@@ -106,7 +106,7 @@ def load_push_credentials(filepath: str, logger: logging.Logger) -> tuple[str, s
     """Read Pushover token and user key from disk or exit with a clear error."""
     if not os.path.isfile(filepath):
         logger.critical(
-            "No push credential file found. Expected: %s  — see README for setup instructions.",
+            "No push credential file found. Expected: %s  -- see README for setup instructions.",
             filepath,
         )
         sys.exit(1)
@@ -119,7 +119,7 @@ def load_push_credentials(filepath: str, logger: logging.Logger) -> tuple[str, s
         user = creds[1].strip().split(":")[1]
     except (IndexError, KeyError):
         logger.critical(
-            "Push credential file is malformed: %s  — expected TOKEN:<value> and USER:<value> on separate lines.",
+            "Push credential file is malformed: %s  -- expected TOKEN:<value> and USER:<value> on separate lines.",
             filepath,
         )
         sys.exit(1)
@@ -159,9 +159,9 @@ def get_time_boundary(hour: int) -> str:
     """
     Return the current operational window based on hour of day.
 
-    'close'  — Morning (6 AM – 1:59 PM): evaluate whether to close windows.
-    'open'   — Evening (6 PM – 11:59 PM): evaluate whether to open windows.
-    'OOB'    — Outside operational boundary; do nothing.
+    'close'  -- Morning (6 AM - 1:59 PM): evaluate whether to close windows.
+    'open'   -- Evening (6 PM - 11:59 PM): evaluate whether to open windows.
+    'OOB'    -- Outside operational boundary; do nothing.
     """
     if 6 <= hour < 14:
         return "close"
@@ -179,13 +179,13 @@ def initialize_db(dbman, pretty_date: str, logger: logging.Logger) -> dict:
     if dbman.check_if_db_file_exists():
         tempdb = dbman.get_db()
         if tempdb["db_creation_date"] != pretty_date:
-            logger.info("DB is from %s — recreating for today.", tempdb["db_creation_date"])
+            logger.info("DB is from %s -- recreating for today.", tempdb["db_creation_date"])
             tempdb = dbman.create_blank_db()
             dbman.write_database_to_disk(tempdb)
         else:
             logger.debug("DB is current (created %s).", pretty_date)
     else:
-        logger.info("No database found — creating a new one.")
+        logger.info("No database found -- creating a new one.")
         tempdb = dbman.create_blank_db()
         dbman.write_database_to_disk(tempdb)
 
@@ -199,12 +199,12 @@ def update_max_temps(
     changed = False
 
     if indoor > tempdb["indoor_max_temp"]:
-        logger.info("Indoor temp %d > stored max %d — updating.", indoor, tempdb["indoor_max_temp"])
+        logger.info("Indoor temp %d > stored max %d -- updating.", indoor, tempdb["indoor_max_temp"])
         tempdb["indoor_max_temp"] = indoor
         changed = True
 
     if outdoor > tempdb["outdoor_max_temp"]:
-        logger.info("Outdoor temp %d > stored max %d — updating.", outdoor, tempdb["outdoor_max_temp"])
+        logger.info("Outdoor temp %d > stored max %d -- updating.", outdoor, tempdb["outdoor_max_temp"])
         tempdb["outdoor_max_temp"] = outdoor
         changed = True
 
@@ -230,13 +230,13 @@ def handle_close_window(
     adjusted_outdoor = outdoor + buffer
 
     if adjusted_outdoor >= indoor:
-        logger.info("CLOSE WINDOWS — outdoor adjusted (%d) >= indoor (%d).", adjusted_outdoor, indoor)
+        logger.info("CLOSE WINDOWS -- outdoor adjusted (%d) >= indoor (%d).", adjusted_outdoor, indoor)
         push.send(token, user, f"CLOSE WINDOWS! {message}")
         tempdb["notification_sent"] = True
         dbman.write_database_to_disk(tempdb)
     else:
         logger.info(
-            "No action — outdoor adjusted (%d) still below indoor (%d). Windows can stay open.",
+            "No action -- outdoor adjusted (%d) still below indoor (%d). Windows can stay open.",
             adjusted_outdoor, indoor,
         )
 
@@ -266,7 +266,7 @@ def handle_open_window(
 
     if adjusted_outdoor < indoor:
         logger.info(
-            "OPEN WINDOWS — effective intake (%d) < indoor (%d) and below AC setpoint (%d).",
+            "OPEN WINDOWS -- effective intake (%d) < indoor (%d) and below AC setpoint (%d).",
             adjusted_outdoor, indoor, cfg.ac_setpoint,
         )
         push.send(token, user, f"OPEN WINDOWS! {message}")
@@ -325,7 +325,7 @@ def main() -> None:
 
     # Check notification lock
     if tempdb["notification_sent"]:
-        logger.info("Notification already sent today — exiting.")
+        logger.info("Notification already sent today -- exiting.")
         sys.exit(0)
 
     # Act on the current time boundary
