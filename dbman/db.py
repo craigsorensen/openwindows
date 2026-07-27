@@ -19,8 +19,8 @@ class db_manager():
         db["indoor_max_temp"] = 0
         db["outdoor_max_temp"] = 0
         db["db_creation_date"] = self.pretty_date
-        db["send_notifcation"] = False
-        db["notification_sent"] = False
+        db["close_notification_sent"] = False
+        db["open_notification_sent"] = False
         return db
 
     def get_db(self):

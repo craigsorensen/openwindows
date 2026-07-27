@@ -325,18 +325,19 @@ def main() -> None:
     tempdb = initialize_db(dbman_instance, pretty_date, logger)
     tempdb = update_max_temps(tempdb, indoor_temp, outdoor_temp, dbman_instance, logger)
 
-    # Check notification lock
-    if tempdb["notification_sent"]:
-        logger.info("Notification already sent today -- exiting.")
-        sys.exit(0)
-
-    # Act on the current time boundary
+    # Check notification lock for the current boundary
     if boundary == "close":
+        if tempdb.get("close_notification_sent", False):
+            logger.info("Close notification already sent today -- exiting.")
+            sys.exit(0)
         handle_close_window(
             tempdb, outdoor_temp, indoor_temp, cfg.outside_degree_buffer,
             token, user, dbman_instance, message, logger,
         )
     elif boundary == "open":
+        if tempdb.get("open_notification_sent", False):
+            logger.info("Open notification already sent today -- exiting.")
+            sys.exit(0)
         handle_open_window(
             tempdb, outdoor_temp, indoor_temp, cfg.outside_degree_buffer,
             cfg, token, user, dbman_instance, message, logger,
