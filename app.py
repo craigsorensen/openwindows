@@ -20,9 +20,9 @@ from __future__ import annotations
 import os
 import sys
 import logging
+import requests
 from dataclasses import dataclass
 from datetime import datetime
-from weather_api import weather
 from indoor_temp import get_indoor_temperature
 from send_push import push
 from dbman import db
@@ -37,11 +37,8 @@ class Config:
     """All tunable parameters in one place."""
 
     # Credential paths (relative to home directory)
-    api_key_path: str = ".config/.weatherapi.txt"
+    weather_cred_path: str = ".config/.weatherapi.txt"
     push_cred_path: str = ".openwindows_push_api.txt"
-
-    # Weather location (lat,lon for WeatherAPI.com -- avoids zip code ambiguity)
-    local_zipcode: str = "44.0615,-123.0170"
 
     # The air intake runs ~2deg F warmer than where the outdoor sensor is
     # located.  This is *added* to the sensor reading to get the effective
@@ -82,26 +79,29 @@ def setup_logging(log_path: str) -> logging.Logger:
 # Credential helpers
 # ---------------------------------------------------------------------------
 
-def load_weather_api_key(filepath: str, logger: logging.Logger) -> str:
-    """Read the weather API key from disk or exit with a clear error."""
+def load_weather_credentials(filepath: str, logger: logging.Logger) -> tuple:
+    """Read Ambient Weather API key and App key from disk or exit with a clear error."""
     if not os.path.isfile(filepath):
         logger.critical(
-            "No API credential file found. Expected: %s  -- see README for setup instructions.",
+            "No weather credential file found. Expected: %s  -- see README for setup instructions.",
             filepath,
         )
         sys.exit(1)
 
     with open(filepath, "r") as f:
-        key = f.readline().strip()
+        creds = f.readlines()
 
-    if not key:
+    try:
+        api_key = creds[0].strip().split(":")[1]
+        app_key = creds[1].strip().split(":")[1]
+    except (IndexError, KeyError):
         logger.critical(
-            "API credential file is empty: %s  -- see README for setup instructions.",
+            "Weather credential file is malformed: %s  -- expected api_key:<value> and app_key:<value> on separate lines.",
             filepath,
         )
         sys.exit(1)
 
-    return key
+    return api_key, app_key
 
 
 def load_push_credentials(filepath: str, logger: logging.Logger) -> tuple[str, str]:
@@ -148,13 +148,21 @@ def fetch_indoor_temp(logger: logging.Logger, retries: int = 5, delay: float = 2
     sys.exit(1)
 
 
-def fetch_outdoor_temp(api_key: str, zipcode: str, logger: logging.Logger) -> int:
-    """Get the current outdoor temperature, or exit on failure."""
+def fetch_weather_station(api_key: str, app_key: str, logger: logging.Logger) -> dict:
+    """Get outdoor temp and downstairs indoor temp from Ambient Weather station."""
     try:
-        wm = weather.WeatherMan(api_key, zipcode)
-        return int(round(wm.temperature))
+        url = "https://rt.ambientweather.net/v1/devices"
+        params = {"apiKey": api_key, "applicationKey": app_key}
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        last = data[0]["lastData"]
+        return {
+            "outdoor_temp": int(round(last["tempf"])),
+            "indoor_temp_downstairs": int(round(last["tempinf"])),
+        }
     except Exception as exc:
-        logger.critical("Failed to read outdoor temperature: %s", exc)
+        logger.critical("Failed to read weather station data: %s", exc)
         sys.exit(1)
 
 
@@ -298,19 +306,21 @@ def main() -> None:
     # Paths
     log_path = os.path.join(script_dir, "app.log")
     db_path = os.path.join(script_dir, "tempdb.json")
-    api_key_file = os.path.join(home_dir, cfg.api_key_path)
+    weather_cred_file = os.path.join(home_dir, cfg.weather_cred_path)
     push_cred_file = os.path.join(home_dir, cfg.push_cred_path)
 
     logger = setup_logging(log_path)
     logger.debug("DB path: %s", db_path)
 
     # Load credentials (exits on failure)
-    weather_api_key = load_weather_api_key(api_key_file, logger)
+    weather_api_key, weather_app_key = load_weather_credentials(weather_cred_file, logger)
     token, user = load_push_credentials(push_cred_file, logger)
 
     # Read temperatures (exits on failure)
-    indoor_temp = fetch_indoor_temp(logger)
-    outdoor_temp = fetch_outdoor_temp(weather_api_key, cfg.local_zipcode, logger)
+    indoor_temp_upstairs = fetch_indoor_temp(logger)
+    station_data = fetch_weather_station(weather_api_key, weather_app_key, logger)
+    outdoor_temp = station_data["outdoor_temp"]
+    indoor_temp_downstairs = station_data["indoor_temp_downstairs"]
 
     now = datetime.now()
     hour = now.hour
@@ -320,15 +330,16 @@ def main() -> None:
     # Buffer is always added: sensor reads low relative to intake air
     adjusted_outdoor = outdoor_temp + cfg.outside_degree_buffer
     message = (
-        f"Inside: {indoor_temp} || Outside: {outdoor_temp} || "
-        f"Effective intake: {adjusted_outdoor} || AC setpoint: {cfg.ac_setpoint}"
+        f"Upstairs: {indoor_temp_upstairs} || Downstairs: {indoor_temp_downstairs} || "
+        f"Outside: {outdoor_temp} || Effective intake: {adjusted_outdoor} || "
+        f"AC setpoint: {cfg.ac_setpoint}"
     )
     logger.info(message)
 
     # Database setup
     dbman_instance = db.db_manager(db_path)
     tempdb = initialize_db(dbman_instance, pretty_date, logger)
-    tempdb = update_max_temps(tempdb, indoor_temp, outdoor_temp, dbman_instance, logger)
+    tempdb = update_max_temps(tempdb, indoor_temp_upstairs, outdoor_temp, dbman_instance, logger)
 
     # Check notification lock for the current boundary
     if boundary == "close":
@@ -336,7 +347,7 @@ def main() -> None:
             logger.info("Close notification already sent today -- exiting.")
             sys.exit(0)
         handle_close_window(
-            tempdb, outdoor_temp, indoor_temp, cfg.outside_degree_buffer,
+            tempdb, outdoor_temp, indoor_temp_upstairs, cfg.outside_degree_buffer,
             token, user, dbman_instance, message, logger,
         )
     elif boundary == "open":
@@ -344,7 +355,7 @@ def main() -> None:
             logger.info("Open notification already sent today -- exiting.")
             sys.exit(0)
         handle_open_window(
-            tempdb, outdoor_temp, indoor_temp, cfg.outside_degree_buffer,
+            tempdb, outdoor_temp, indoor_temp_upstairs, cfg.outside_degree_buffer,
             cfg, token, user, dbman_instance, message, logger,
         )
     else:
